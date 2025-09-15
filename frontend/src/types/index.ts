@@ -1,29 +1,31 @@
-export type RoomType = 'Лекц.' | 'Комп.' | 'Практ.';
+// src/types.ts
+export type RoomType = 'all' | 'lecture' | 'computer' | 'practice';
 
-export type Room = {
+export interface Filters {
+    search: string;
+    roomType: RoomType;
+    hasProjector: boolean | null;
+    showOnlyFree: boolean;
+    date: string; // YYYY-MM-DD
+}
+
+export interface Room {
     id: string;
-    code: string;           // Ж-310
-    building: string;       // Ж
-    floor: number;          // 3
-    type: RoomType;
-    capacity: number;
+    code: string;     // Например: "Ж-310"
+    building: string; // "Ж"
+    floor: number;    // 3
+    type: Exclude<RoomType, 'all'>;
     hasProjector: boolean;
-};
+}
 
-export type Booking = {
+export type PairIndex = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface Booking {
     id: string;
     roomId: string;
-    pair: 1 | 2 | 3 | 4 | 5 | 6;      // номер пары
-    date: string;           // YYYY-MM-DD
-    title?: string;
+    date: string;    // YYYY-MM-DD
+    pair: PairIndex; // 1..6
+    title?: string;  // Название занятия
     teacher?: string;
-    isMine?: boolean;       // пометка «моя бронь»
-};
-
-export type Filters = {
-    search: string;                 // Ж-310 | Ж-3 | Ж
-    roomType: 'all' | RoomType;
-    date: string;                   // выбранный день
-    hasProjector: boolean | null;     // true — фильтровать только с проектором; null — игнор
-    showOnlyFree: boolean;          // показывать только аудитории с свободными слотами
-};
+    mine?: boolean;  // моя бронь
+}

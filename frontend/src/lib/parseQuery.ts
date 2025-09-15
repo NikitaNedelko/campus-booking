@@ -1,18 +1,19 @@
-export function parseQuery(q: string) {
-    const s = q.trim().toUpperCase();
-    if (!s) return null;
+// src/lib/parseQuery.ts
+export type RoomQuery =
+    | { building: string; floor?: number; room?: number }
+    | { text: string };
 
-    // Ж-310 → { building:'Ж', floor:3, room:'10' }
-    let m = s.match(/^([А-ЯЁ])-(\d)(\d{2})$/);
-    if (m) return { building: m[1], floor: Number(m[2]), room: m[3] };
+export function parseRoomQuery(raw: string): RoomQuery {
+    const s = raw.trim().toUpperCase().replace(/\s+/g, '');
 
-    // Ж-3 → { building:'Ж', floor:3 }
-    m = s.match(/^([А-ЯЁ])-(\d)$/);
-    if (m) return { building: m[1], floor: Number(m[2]) };
+    const mFull = /^([А-ЯA-Z])-(\d)(\d{2})$/.exec(s);
+    if (mFull) return { building: mFull[1], floor: +mFull[2], room: +mFull[3] };
 
-    // Ж → { building:'Ж' }
-    m = s.match(/^([А-ЯЁ])$/);
-    if (m) return { building: m[1] };
+    const mFloor = /^([А-ЯA-Z])-(\d)$/.exec(s);
+    if (mFloor) return { building: mFloor[1], floor: +mFloor[2] };
 
-    return null;
+    const mBuilding = /^([А-ЯA-Z])$/.exec(s);
+    if (mBuilding) return { building: mBuilding[1] };
+
+    return { text: raw };
 }

@@ -1,106 +1,69 @@
-import { rooms as allRooms, timeSlots } from '../data/mockData';
-import { Booking, Filters, Room } from '../types';
-import { parseQuery } from '../lib/parseQuery';
+// src/components/ScheduleTable.tsx
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Icons } from "../components/ui/icons";
+import type { Booking, Filters, Room } from "../types";
+import { PAIRS } from "../data/mockData";
 
-function byFilters(rooms: Room[], filters: Filters, bookings: Booking[]) {
-    const q = filters.search.trim().toUpperCase();
-    const parsed = parseQuery(q);
-
-    // посчитаем, у каких комнат есть свободные слоты (для "Показать только свободные")
-    const busyByRoom = new Map<string, number>();
-    bookings.forEach(b => busyByRoom.set(b.roomId, (busyByRoom.get(b.roomId) || 0) + 1));
-
-    return rooms.filter(r => {
-        if (filters.roomType !== 'all' && r.type !== filters.roomType) return false;
-        if (filters.hasProjector === true && !r.hasProjector) return false;
-
-        if (parsed) {
-            if (parsed.building && r.building.toUpperCase() !== parsed.building) return false;
-            if (typeof parsed.floor === 'number' && r.floor !== parsed.floor) return false;
-            if (parsed.room && !r.code.endsWith(parsed.room)) return false;
-        } else if (q) {
-            // fallback: простая подстрока
-            if (!r.code.toUpperCase().includes(q)) return false;
-        }
-
-        if (filters.showOnlyFree) {
-            const busy = busyByRoom.get(r.id) || 0;
-            // показываем, если есть хотя бы 1 свободный слот из 6
-            if (busy >= timeSlots.length) return false;
-        }
-        return true;
-    });
+interface Props {
+    rooms: Room[];
+    bookings: Booking[];
+    filters: Filters;
 }
 
-export default function ScheduleTable({ bookings, filters }: { bookings: Booking[]; filters: Filters; }) {
-    const rooms = byFilters(allRooms, filters, bookings);
-    const map = new Map<string, Booking>();
-    bookings.forEach(b => map.set(`${b.roomId}-${b.pair}`, b));
+function cellState(roomId: string, date: string, pair: number, bookings: Booking[]) {
+    const b = bookings.find(x => x.roomId === roomId && x.date === date && x.pair === pair);
+    if (!b) return { status: "free" as const };
+    return { status: b.mine ? "mine" as const : "busy" as const, booking: b };
+}
 
-    const freeSlots = rooms.reduce((acc, r) => {
-        const busyCount = timeSlots.filter(s => map.has(`${r.id}-${s.pair}`)).length;
-        return acc + (timeSlots.length - busyCount);
-    }, 0);
-
+export function ScheduleTable({ rooms, bookings, filters }: Props) {
     return (
-        <div className="mt-6">
-            {/* карточки-метрики */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="border rounded-xl p-4">
-                    <div className="text-sm text-zinc-500">Кабинетов найдено</div>
-                    <div className="text-3xl font-semibold">{rooms.length}</div>
-                </div>
-                <div className="border rounded-xl p-4">
-                    <div className="text-sm text-zinc-500">Свободных слотов</div>
-                    <div className="text-3xl font-semibold">{freeSlots}</div>
-                </div>
-                <div className="border rounded-xl p-4">
-                    <div className="text-sm text-zinc-500">Моих броней</div>
-                    <div className="text-3xl font-semibold">{bookings.filter(b => b.isMine).length}</div>
-                </div>
-            </div>
-
-            {/* легенда */}
-            <div className="flex gap-3 items-center mb-2">
-                <span className="px-2 py-1 rounded badge-free text-sm">Свободно</span>
-                <span className="px-2 py-1 rounded badge-busy text-sm">Занято</span>
-                <span className="px-2 py-1 rounded badge-mine text-sm">Моя бронь</span>
-            </div>
-
-            {/* таблица */}
-            <div className="grid border rounded-xl overflow-x-auto">
-                {/* заголовок */}
-                <div className="grid grid-cols-7 sticky top-0 bg-white border-b">
-                    <div className="p-3 font-medium">Кабинет</div>
-                    {timeSlots.map(s => (
-                        <div key={s.pair} className="p-3 text-sm text-zinc-600">
-                            {s.pair} пара<br />{s.time}
-                        </div>
+        <Card className="p-0 overflow-auto">
+            <div className="min-w-[900px]">
+                {/* Header */}
+                <div className="sticky top-0 z-10 grid grid-cols-[200px_repeat(6,1fr)] bg-white border-b">
+                    <div className="px-4 py-3 font-medium">Кабинет</div>
+                    {PAIRS.map(p => (
+                        <div key={p.index} className="px-4 py-3 text-center font-medium">{p.index} пара<br /><span className="text-xs text-muted-foreground">{p.time}</span></div>
                     ))}
                 </div>
 
-                {/* строки комнат */}
-                {rooms.map(r => (
-                    <div key={r.id} className="grid grid-cols-7 border-b">
-                        <div className="p-3">
+                {/* Rows */}
+                {rooms.map((r) => (
+                    <div key={r.id} className="grid grid-cols-[200px_repeat(6,1fr)] border-b">
+                        {/* Left col */}
+                        <div className="px-4 py-3 bg-white sticky left-0 z-10 border-r flex items-center gap-2">
                             <div className="font-medium">{r.code}</div>
-                            <div className="text-xs text-zinc-500">{r.type} • до {r.capacity} мест</div>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                                {r.type === "computer" && <Badge variant="secondary" className="gap-1"><Icons.Monitor className="h-3 w-3" /> Комн.</Badge>}
+                                {r.type === "lecture" && <Badge variant="secondary" className="gap-1">Лекц.</Badge>}
+                                {r.type === "practice" && <Badge variant="secondary" className="gap-1">Практ.</Badge>}
+                                {r.hasProjector && <Badge variant="outline" className="gap-1"><Icons.Projector className="h-3 w-3" /> Проектор</Badge>}
+                            </div>
                         </div>
 
-                        {timeSlots.map(s => {
-                            const b = map.get(`${r.id}-${s.pair}`);
-                            const cls = b ? (b.isMine ? 'badge-mine' : 'badge-busy') : 'badge-free';
-                            return (
-                                <div key={s.pair} className="p-2 flex items-center justify-center cursor-default">
-                                    <span className={`px-2 py-1 rounded ${cls}`}>
-                                        {b ? (b.isMine ? 'Моя бронь' : 'Занято') : 'Свободно'}
-                                    </span>
-                                </div>
-                            );
+                        {/* Cells */}
+                        {PAIRS.map((p) => {
+                            const st = cellState(r.id, filters.date, p.index, bookings);
+                            const base = "px-4 py-3 text-sm border-r cursor-pointer";
+                            if (st.status === "free") {
+                                return <div key={p.index} className={base + " bg-green-50 hover:bg-green-100"}>Свободно</div>;
+                            }
+                            if (st.status === "mine") {
+                                return <div key={p.index} className={base + " bg-blue-50 hover:bg-blue-100"}>
+                                    <div className="font-medium">Моя бронь</div>
+                                    <div className="text-xs text-muted-foreground">{st.booking?.title}</div>
+                                </div>;
+                            }
+                            return <div key={p.index} className={base + " bg-red-50 hover:bg-red-100"}>
+                                <div className="font-medium">{st.booking?.title}</div>
+                                <div className="text-xs text-muted-foreground">{st.booking?.teacher}</div>
+                            </div>;
                         })}
                     </div>
                 ))}
             </div>
-        </div>
+        </Card>
     );
 }
