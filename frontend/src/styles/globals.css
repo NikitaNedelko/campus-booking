@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --success: 22 163 74;
+    /* зелёный */
+    --danger: 239 68 68;
+    /* красный */
+}
+
+.badge-free {
+    background-color: rgb(var(--success)/.12);
+    color: rgb(var(--success));
+}
+
+.badge-busy {
+    background-color: rgb(var(--danger)/.12);
+    color: rgb(var(--danger));
+}
+
+.badge-mine {
+    @apply bg-indigo-100 text-indigo-700;
+}
