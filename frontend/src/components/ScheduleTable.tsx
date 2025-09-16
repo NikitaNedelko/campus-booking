@@ -1,69 +1,231 @@
-// src/components/ScheduleTable.tsx
-import { Card } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Icons } from "../components/ui/icons";
-import type { Booking, Filters, Room } from "../types";
-import { PAIRS } from "../data/mockData";
+import React, { useState } from 'react';
+import { Monitor, Projector } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Badge } from './ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Room, TimeSlot, Booking } from '../types';
+import { BookingModal } from './BookingModal';
+import { RoomHighlight } from './RoomHighlight';
 
-interface Props {
-    rooms: Room[];
-    bookings: Booking[];
-    filters: Filters;
+interface ScheduleTableProps {
+  rooms: Room[];
+  timeSlots: TimeSlot[];
+  bookings: Booking[];
+  searchQuery?: string;
+  selectedDate: string;
+  onBookingUpdate: (booking: Partial<Booking>) => void;
+  onBookingDelete: (bookingId: string) => void;
 }
 
-function cellState(roomId: string, date: string, pair: number, bookings: Booking[]) {
-    const b = bookings.find(x => x.roomId === roomId && x.date === date && x.pair === pair);
-    if (!b) return { status: "free" as const };
-    return { status: b.mine ? "mine" as const : "busy" as const, booking: b };
-}
+export function ScheduleTable({ 
+  rooms, 
+  timeSlots, 
+  bookings, 
+  searchQuery = '',
+  selectedDate,
+  onBookingUpdate, 
+  onBookingDelete 
+}: ScheduleTableProps) {
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    room: Room | null;
+    timeSlot: TimeSlot | null;
+    booking: Booking | null;
+  }>({
+    isOpen: false,
+    room: null,
+    timeSlot: null,
+    booking: null,
+  });
 
-export function ScheduleTable({ rooms, bookings, filters }: Props) {
-    return (
-        <Card className="p-0 overflow-auto">
-            <div className="min-w-[900px]">
-                {/* Header */}
-                <div className="sticky top-0 z-10 grid grid-cols-[200px_repeat(6,1fr)] bg-white border-b">
-                    <div className="px-4 py-3 font-medium">Кабинет</div>
-                    {PAIRS.map(p => (
-                        <div key={p.index} className="px-4 py-3 text-center font-medium">{p.index} пара<br /><span className="text-xs text-muted-foreground">{p.time}</span></div>
-                    ))}
-                </div>
+  const getBooking = (roomId: string, timeSlotId: string): Booking | undefined => {
+    return bookings.find(b => b.roomId === roomId && b.timeSlotId === timeSlotId);
+  };
 
-                {/* Rows */}
-                {rooms.map((r) => (
-                    <div key={r.id} className="grid grid-cols-[200px_repeat(6,1fr)] border-b">
-                        {/* Left col */}
-                        <div className="px-4 py-3 bg-white sticky left-0 z-10 border-r flex items-center gap-2">
-                            <div className="font-medium">{r.code}</div>
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                                {r.type === "computer" && <Badge variant="secondary" className="gap-1"><Icons.Monitor className="h-3 w-3" /> Комн.</Badge>}
-                                {r.type === "lecture" && <Badge variant="secondary" className="gap-1">Лекц.</Badge>}
-                                {r.type === "practice" && <Badge variant="secondary" className="gap-1">Практ.</Badge>}
-                                {r.hasProjector && <Badge variant="outline" className="gap-1"><Icons.Projector className="h-3 w-3" /> Проектор</Badge>}
-                            </div>
-                        </div>
+  const getCellClass = (booking: Booking | undefined): string => {
+    if (!booking) return 'bg-green-50 hover:bg-green-100 cursor-pointer border border-green-200';
+    
+    switch (booking.status) {
+      case 'free':
+        return 'bg-green-50 hover:bg-green-100 cursor-pointer border border-green-200';
+      case 'occupied':
+        return 'bg-red-50 hover:bg-red-100 cursor-pointer border border-red-200';
+      case 'my-booking':
+        return 'bg-blue-50 hover:bg-blue-100 cursor-pointer border border-blue-200';
+      default:
+        return 'bg-green-50 hover:bg-green-100 cursor-pointer border border-green-200';
+    }
+  };
 
-                        {/* Cells */}
-                        {PAIRS.map((p) => {
-                            const st = cellState(r.id, filters.date, p.index, bookings);
-                            const base = "px-4 py-3 text-sm border-r cursor-pointer";
-                            if (st.status === "free") {
-                                return <div key={p.index} className={base + " bg-green-50 hover:bg-green-100"}>Свободно</div>;
-                            }
-                            if (st.status === "mine") {
-                                return <div key={p.index} className={base + " bg-blue-50 hover:bg-blue-100"}>
-                                    <div className="font-medium">Моя бронь</div>
-                                    <div className="text-xs text-muted-foreground">{st.booking?.title}</div>
-                                </div>;
-                            }
-                            return <div key={p.index} className={base + " bg-red-50 hover:bg-red-100"}>
-                                <div className="font-medium">{st.booking?.title}</div>
-                                <div className="text-xs text-muted-foreground">{st.booking?.teacher}</div>
-                            </div>;
-                        })}
+  const handleCellClick = (room: Room, timeSlot: TimeSlot) => {
+    const booking = getBooking(room.id, timeSlot.id);
+    
+    // Если слот занят не мной, не открываем модальное окно
+    if (booking && booking.status === 'occupied' && !booking.isMyBooking) {
+      return;
+    }
+    
+    setModalState({
+      isOpen: true,
+      room,
+      timeSlot,
+      booking: booking || null,
+    });
+  };
+
+  const handleBookingSave = (bookingData: Partial<Booking>) => {
+    onBookingUpdate(bookingData);
+  };
+
+  const handleBookingDelete = () => {
+    if (modalState.booking) {
+      onBookingDelete(modalState.booking.id);
+    }
+  };
+
+  const closeModal = () => {
+    setModalState({
+      isOpen: false,
+      room: null,
+      timeSlot: null,
+      booking: null,
+    });
+  };
+
+  return (
+    <>
+      <div className="border rounded-lg overflow-auto max-h-[600px]">
+        <Table>
+          <TableHeader className="sticky top-0 z-20">
+            <TableRow>
+              <TableHead className="w-48 sticky left-0 bg-background z-30 border-r">
+                Кабинет
+              </TableHead>
+              {timeSlots.map((slot) => (
+                <TableHead key={slot.id} className="text-center min-w-32 bg-background">
+                  <div>
+                    <div className="font-medium">{slot.pairNumber} пара</div>
+                    <div className="text-xs text-muted-foreground">
+                      {slot.startTime} - {slot.endTime}
                     </div>
-                ))}
-            </div>
-        </Card>
-    );
+                  </div>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rooms.map((room) => (
+              <TableRow key={room.id}>
+                <TableCell className="sticky left-0 bg-background z-10 border-r shadow-sm">
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      <RoomHighlight roomName={room.name} searchQuery={searchQuery} />
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      <Badge variant="secondary" className="text-xs">
+                        {room.type === 'lecture' && 'Лекц.'}
+                        {room.type === 'computer' && 'Комп.'}
+                        {room.type === 'practice' && 'Практ.'}
+                      </Badge>
+                      {room.hasProjector && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge variant="outline" className="text-xs">
+                                <Projector className="h-3 w-3" />
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Есть проектор</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {room.type === 'computer' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge variant="outline" className="text-xs">
+                                <Monitor className="h-3 w-3" />
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Компьютерный класс</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      До {room.capacity} мест
+                    </div>
+                  </div>
+                </TableCell>
+                {timeSlots.map((slot) => {
+                  const booking = getBooking(room.id, slot.id);
+                  return (
+                    <TableCell
+                      key={slot.id}
+                      className={`p-2 h-20 ${getCellClass(booking)}`}
+                      onClick={() => handleCellClick(room, slot)}
+                    >
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="w-full h-full flex items-center justify-center">
+                            <div className="text-center">
+                              {booking && booking.status !== 'free' ? (
+                                <div className="space-y-1">
+                                  <div className="text-xs font-medium truncate">
+                                    {booking.subject}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {booking.teacher}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-muted-foreground">
+                                  Свободно
+                                </div>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {booking && booking.status !== 'free' ? (
+                              <div>
+                                <p className="font-medium">{booking.subject}</p>
+                                <p className="text-sm">Преподаватель: {booking.teacher}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {booking.isMyBooking ? 
+                                    'Нажмите для редактирования' : 
+                                    'Время занято'
+                                  }
+                                </p>
+                              </div>
+                            ) : (
+                              <p>Нажмите для бронирования</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <BookingModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        room={modalState.room}
+        timeSlot={modalState.timeSlot}
+        booking={modalState.booking}
+        selectedDate={selectedDate}
+        onSave={handleBookingSave}
+        onDelete={modalState.booking?.isMyBooking ? handleBookingDelete : undefined}
+      />
+    </>
+  );
 }

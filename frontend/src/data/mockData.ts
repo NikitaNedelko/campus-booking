@@ -1,29 +1,88 @@
-// src/data/mockData.ts
-import type { Room, Booking, PairIndex } from "../types/index";
+import { Room, TimeSlot, Booking } from '../types';
 
-export const PAIRS: { index: PairIndex; time: string }[] = [
-    { index: 1, time: "09:00 - 10:30" },
-    { index: 2, time: "10:45 - 12:15" },
-    { index: 3, time: "12:30 - 14:00" },
-    { index: 4, time: "14:15 - 15:45" },
-    { index: 5, time: "16:00 - 17:30" },
-    { index: 6, time: "17:45 - 19:15" },
+export const rooms: Room[] = [
+  { id: '1', name: 'Ж-310', building: 'Ж', floor: 3, roomNumber: 10, type: 'lecture', hasProjector: true, capacity: 120 },
+  { id: '2', name: 'Ж-311', building: 'Ж', floor: 3, roomNumber: 11, type: 'computer', hasProjector: true, capacity: 24 },
+  { id: '3', name: 'Ж-312', building: 'Ж', floor: 3, roomNumber: 12, type: 'practice', hasProjector: false, capacity: 30 },
+  { id: '4', name: 'А-205', building: 'А', floor: 2, roomNumber: 5, type: 'lecture', hasProjector: true, capacity: 80 },
+  { id: '5', name: 'А-206', building: 'А', floor: 2, roomNumber: 6, type: 'computer', hasProjector: true, capacity: 20 },
+  { id: '6', name: 'Б-410', building: 'Б', floor: 4, roomNumber: 10, type: 'practice', hasProjector: false, capacity: 25 },
+  { id: '7', name: 'В-101', building: 'В', floor: 1, roomNumber: 1, type: 'lecture', hasProjector: true, capacity: 150 },
+  { id: '8', name: 'В-102', building: 'В', floor: 1, roomNumber: 2, type: 'computer', hasProjector: true, capacity: 30 },
+  { id: '9', name: 'Г-508', building: 'Г', floor: 5, roomNumber: 8, type: 'practice', hasProjector: false, capacity: 20 },
+  { id: '10', name: 'Д-301', building: 'Д', floor: 3, roomNumber: 1, type: 'lecture', hasProjector: true, capacity: 100 },
 ];
 
-export const ROOMS: Room[] = [
-    { id: "r1", code: "Ж-310", building: "Ж", floor: 3, type: "lecture", hasProjector: true },
-    { id: "r2", code: "Ж-311", building: "Ж", floor: 3, type: "computer", hasProjector: false },
-    { id: "r3", code: "Ж-210", building: "Ж", floor: 2, type: "practice", hasProjector: true },
+export const timeSlots: TimeSlot[] = [
+  { id: '1', startTime: '09:00', endTime: '10:30', pairNumber: 1 },
+  { id: '2', startTime: '10:45', endTime: '12:15', pairNumber: 2 },
+  { id: '3', startTime: '12:30', endTime: '14:00', pairNumber: 3 },
+  { id: '4', startTime: '14:15', endTime: '15:45', pairNumber: 4 },
+  { id: '5', startTime: '16:00', endTime: '17:30', pairNumber: 5 },
+  { id: '6', startTime: '17:45', endTime: '19:15', pairNumber: 6 },
 ];
 
-export function todayISO(offset = 0) {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    return d.toISOString().split("T")[0];
+export const generateMockBookings = (selectedDate: string): Booking[] => {
+  const bookings: Booking[] = [];
+  
+  rooms.forEach((room) => {
+    timeSlots.forEach((slot) => {
+      // Генерируем случайные брони для демонстрации
+      const random = Math.random();
+      if (random < 0.4) { // 40% занятых слотов
+        const isMyBooking = random < 0.1; // 10% моих броней
+        bookings.push({
+          id: `${room.id}-${slot.id}-${selectedDate}`,
+          roomId: room.id,
+          timeSlotId: slot.id,
+          date: selectedDate,
+          subject: isMyBooking ? 'Моя лекция' : getRandomSubject(),
+          teacher: isMyBooking ? 'Вы' : getRandomTeacher(),
+          isMyBooking,
+          status: isMyBooking ? 'my-booking' : 'occupied',
+        });
+      } else {
+        bookings.push({
+          id: `${room.id}-${slot.id}-${selectedDate}`,
+          roomId: room.id,
+          timeSlotId: slot.id,
+          date: selectedDate,
+          subject: '',
+          teacher: '',
+          isMyBooking: false,
+          status: 'free',
+        });
+      }
+    });
+  });
+  
+  return bookings;
+};
+
+const subjects = [
+  'Математический анализ',
+  'Физика',
+  'Программирование',
+  'База данных',
+  'Электротехника',
+  'Теория вероятностей',
+  'Дискретная математика',
+  'Системный анализ',
+];
+
+const teachers = [
+  'Иванов И.И.',
+  'Петров П.П.',
+  'Сидоров С.С.',
+  'Козлов К.К.',
+  'Смирнов А.В.',
+  'Морозов М.М.',
+];
+
+function getRandomSubject(): string {
+  return subjects[Math.floor(Math.random() * subjects.length)];
 }
 
-export const BOOKINGS: Booking[] = [
-    { id: "b1", roomId: "r1", date: todayISO(0), pair: 1, title: "Системный анализ", teacher: "Смирнов А.В." },
-    { id: "b2", roomId: "r2", date: todayISO(0), pair: 1, title: "Лекции (комп.)", teacher: "Козлов К.К.", mine: true },
-    { id: "b3", roomId: "r1", date: todayISO(0), pair: 6, title: "Программирование", teacher: "Смирнов А.В." },
-];
+function getRandomTeacher(): string {
+  return teachers[Math.floor(Math.random() * teachers.length)];
+}
