@@ -14,17 +14,17 @@ export const rooms: Room[] = [
 ];
 
 export const timeSlots: TimeSlot[] = [
-  { id: '1', startTime: '09:00', endTime: '10:30', pairNumber: 1 },
-  { id: '2', startTime: '10:45', endTime: '12:15', pairNumber: 2 },
-  { id: '3', startTime: '12:30', endTime: '14:00', pairNumber: 3 },
-  { id: '4', startTime: '14:15', endTime: '15:45', pairNumber: 4 },
-  { id: '5', startTime: '16:00', endTime: '17:30', pairNumber: 5 },
-  { id: '6', startTime: '17:45', endTime: '19:15', pairNumber: 6 },
+  { id: '1', startTime: '09:20', endTime: '10:50', pairNumber: 1 },
+  { id: '2', startTime: '11:10', endTime: '12:45', pairNumber: 2 },
+  { id: '3', startTime: '13:45', endTime: '15:20', pairNumber: 3 },
+  { id: '4', startTime: '15:35', endTime: '17:10', pairNumber: 4 },
+  { id: '5', startTime: '17:20', endTime: '18:50', pairNumber: 5 },
+  { id: '6', startTime: '19:00', endTime: '20:30', pairNumber: 6 },
 ];
 
 export const generateMockBookings = (selectedDate: string): Booking[] => {
   const bookings: Booking[] = [];
-  
+
   rooms.forEach((room) => {
     timeSlots.forEach((slot) => {
       // Генерируем случайные брони для демонстрации
@@ -55,7 +55,7 @@ export const generateMockBookings = (selectedDate: string): Booking[] => {
       }
     });
   });
-  
+
   return bookings;
 };
 
