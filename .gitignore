@@ -187,3 +187,6 @@ poetry.lock
 backend.tf
 **/ansible/
 *.env
+
+# писанина
+оформление курсовой
