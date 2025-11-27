@@ -7,7 +7,7 @@
 
 ## Пример запроса
 ```bash
-curl -i http://localhost:8000/ping
+curl -i http://localhost:8000/api/ping
 ```
 
 ## Пример ответа
