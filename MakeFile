@@ -1,0 +1,8 @@
+openapi:
+\tcurl -s http://localhost:8000/openapi.json > shared/openapi.json
+\tpython - <<'PY' > shared/openapi.yaml
+import json,sys,yaml; yaml.safe_dump(json.load(open("shared/openapi.json")), sys.stdout, sort_keys=False, allow_unicode=True)
+PY
+
+client:
+\tnpx openapi-typescript-codegen --input shared/openapi.yaml --output shared/client --client fetch --useUnionTypes
