@@ -1,6 +1,10 @@
-from backend.app.settings import settings
+from fastapi import FastAPI
 
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-]
+from app.settings import settings
+
+app = FastAPI(title=settings.app.service_name)
+
+
+@app.get("/ping")
+async def ping() -> dict[str, bool]:
+    return {"pong": True}
