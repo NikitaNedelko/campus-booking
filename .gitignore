@@ -190,3 +190,7 @@ backend.tf
 
 # писанина
 оформление курсовой
+
+# README.md для агентов 
+
+backend/AGENTS.md
