@@ -49,3 +49,11 @@ content-type: application/json; charset=utf-8
   `docker compose exec -T postgres psql -U ${DATABASE_USERNAME} -d ${DATABASE_NAME} -f /path/in/container.sql`  
   (подайте файл через stdin: `cat dump.sql | docker compose exec -T postgres psql -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}`)
 - Посмотреть список БД: `\l`, таблиц: `\dt`, выйти: `\q`.
+
+## Alembic (локально без Docker)
+- Перед командами убедитесь, что Postgres доступен и заданы переменные окружения из `.env` (`DATABASE_*`, `APP_PATH_PREFIX` и т.д.), иначе Alembic не получит DSN из `app/settings.py`.
+- Применить все миграции: `poetry run alembic -c app/db/alembic.ini upgrade head`.
+- Создать ревизию по изменениям моделей: `poetry run alembic -c app/db/alembic.ini revision --autogenerate -m "short message"`.
+- Проверить автогенерацию перед коммитом: откройте файл из `app/db/alembic/versions` и убедитесь, что операции соответствуют ожидаемым (особенно для ENUM и INDEX параметров `postgresql_where`/`include`).
+- Откатить на предыдущую версию: `poetry run alembic -c app/db/alembic.ini downgrade -1`.
+- Автогенерация видит модели, потому что все классы импортированы в `app/db/models/__init__.py`; при добавлении новых моделей убедитесь, что импорт добавлен туда же.
