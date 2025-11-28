@@ -17,3 +17,30 @@ content-type: application/json; charset=utf-8
 
 {"pong": true}
 ```
+
+## Запуск через Docker
+1. Создайте файл окружения: `cp .env.example .env` и задайте значения (минимум `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `DATABASE_NAME`).
+2. Соберите образы: `docker compose build`.
+3. Поднимите стек: `docker compose up -d`.  
+   - Контейнер `migrate` автоматически применит миграции Alembic к базе `postgres`.  
+   - Приложение будет доступно на `http://localhost:${APP_PORT:-8000}`.
+4. Остановить и удалить ресурсы: `docker compose down -v` (флаг `-v` удалит volume с данными Postgres).
+
+### Управление миграциями вручную
+- Создать ревизию: `docker compose run --rm migrate alembic -c app/db/alembic.ini revision -m "message"`.
+- Применить изменения: `docker compose run --rm migrate alembic -c app/db/alembic.ini upgrade head`.
+- Откатить один шаг: `docker compose run --rm migrate alembic -c app/db/alembic.ini downgrade -1`.
+
+### Обновление образа backend без пересборки всего стека
+Если изменилась только логика приложения:
+1. Пересоберите образ сервиса `app`: `docker compose build app`.
+2. Перезапустите контейнер с новым образом: `docker compose up -d app`.
+   - Миграции при таком сценарии не трогаются; если менялась схема БД — выполните `docker compose run --rm migrate alembic -c app/db/alembic.ini upgrade head` перед рестартом приложения.
+
+### Как подключиться к Postgres внутри Docker
+- Открыть интерактивный psql в контейнере:  
+  `docker compose exec postgres psql -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}`
+- Выполнить SQL из файла:  
+  `docker compose exec -T postgres psql -U ${DATABASE_USERNAME} -d ${DATABASE_NAME} -f /path/in/container.sql`  
+  (подайте файл через stdin: `cat dump.sql | docker compose exec -T postgres psql -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}`)
+- Посмотреть список БД: `\l`, таблиц: `\dt`, выйти: `\q`.
