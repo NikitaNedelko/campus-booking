@@ -10,6 +10,11 @@
 curl -i http://localhost:8000/api/ping
 ```
 
+Проверка готовности с обращением к базе:
+```bash
+curl -i http://localhost:8000/api/readyz
+```
+
 ## Пример ответа
 ```http
 HTTP/1.1 200 OK
